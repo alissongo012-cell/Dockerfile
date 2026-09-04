@@ -5,14 +5,16 @@ USER root
 # Evita travar a instalação com perguntas de fuso horário
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Atualiza e instala o navegador e as ferramentas gráficas
+# Instala a parte gráfica, o gerenciador Openbox e o navegador de forma correta
 RUN apt-get update && apt-get install -y --no-install-recommends \
     xvfb \
     x11vnc \
     novnc \
     websockify \
     supervisor \
+    openbox \
     chromium-browser \
+    dbus-x11 \
     && rm -rf /var/lib/apt/lists/*
 
 # SENHA OBRIGATÓRIA: Exigida pelo painel do ModelScope
@@ -23,11 +25,12 @@ ENV RESOLUTION=1280x800x16
 # Configura o gerenciador de processos (supervisor)
 RUN printf "[supervisord]\nnodaemon=true\n\n" > /etc/supervisord.conf
 RUN printf "[program:xvfb]\ncommand=Xvfb :1 -screen 0 1280x800x16\n\n" >> /etc/supervisord.conf
+RUN printf "[program:openbox]\ncommand=openbox-session\n\n" >> /etc/supervisord.conf
 RUN printf "[program:x11vnc]\ncommand=x11vnc -display :1 -forever -passwd 123456 -listen 127.0.0.1 -shared\n\n" >> /etc/supervisord.conf
 RUN printf "[program:novnc]\ncommand=websockify --web /usr/share/novnc 7860 127.0.0.1:5900\n\n" >> /etc/supervisord.conf
 
-# FLAGS ANTI-DETEÇÃO: Abre o navegador camuflado no Dropcoins
-RUN printf "[program:chromium]\ncommand=chromium-browser --no-sandbox --disable-gpu --display=:1 --start-maximized --disable-blink-features=AutomationControlled --user-agent=\"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36\" --window-size=1280,800 https://dropcoins.xyz\n" >> /etc/supervisord.conf
+# FLAGS OTIMIZADAS: Garante a inicialização fluida e camuflada no Dropcoins
+RUN printf "[program:chromium]\ncommand=chromium-browser --no-sandbox --disable-gpu --display=:1 --start-maximized --disable-dev-shm-usage --disable-blink-features=AutomationControlled --user-agent=\"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36\" --window-size=1280,800 https://dropcoins.xyz\n" >> /etc/supervisord.conf
 
 EXPOSE 7860
 
