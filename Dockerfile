@@ -1,27 +1,17 @@
-FROM debian:11-slim
+FROM accetto/ubuntu-vnc-xfce-chromium-g3:latest
 
-# Evita travar a instalação com perguntas interativas
-ENV DEBIAN_FRONTEND=noninteractive
+# Define que o sistema vai rodar na porta 7860 exigida pelo ModelScope
+ENV VNC_PORT=5901
+ENV NO_VNC_PORT=7860
 
-# Instala o ambiente gráfico estável, o navegador Chromium e o gerenciador de processos (supervisor)
-RUN apt-get update && apt-get install -y \
-    xvfb \
-    x11vnc \
-    novnc \
-    websockify \
-    chromium \
-    supervisor \
-    && rm -rf /var/lib/apt/lists/*
+# Desativa a necessidade de senha para facilitar o seu acesso inicial
+ENV VNC_PW=
 
-# Configura o ecrã virtual com uma resolução padrão leve (poupa RAM)
-ENV DISPLAY=:1
-ENV RESOLUTION=1280x800x16
+# Força a resolução leve para carregar rápido no celular
+ENV VNC_RESOLUTION=1280x800
 
-# Cria a configuração para rodar o Xvfb, VNC, noVNC e o Navegador em paralelo na porta 7860
-RUN echo '[supervisord]\nnodaemon=true\n\n[program:xvfb]\ncommand=Xvfb :1 -screen 0 1280x800x16\n\n[program:x11vnc]\ncommand=x11vnc -display :1 -forever -nopw -listen localhost -shared\n\n[program:novnc]\ncommand=/usr/share/novnc/utils/launch.sh --vnc localhost:5900 --listen 7860\n\n[program:chromium]\ncommand=chromium --no-sandbox --disable-gpu --display=:1 --start-maximized https://google.com\nuser=root' > /etc/supervisord.conf
-
-# Expõe a porta que o sistema do ModelScope lê para exibir a aplicação na web
+# Expõe a porta de visualização web
 EXPOSE 7860
 
-# Inicializa o gerenciador que liga todos os serviços juntos
-CMD ["/usr/bin/supervisord", "-c", "/etc/supervisord.conf"]
+# Comando padrão da imagem que já inicia o ambiente gráfico e o navegador automaticamente
+CMD [ "/headless/vnc_startup.sh", "--wait" ]
