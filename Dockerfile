@@ -1,37 +1,23 @@
-FROM ubuntu:22.04
+FROM debian:11-slim
 
-USER root
-
-# Evita travar a instalação com perguntas de fuso horário
-ENV DEBIAN_FRONTEND=noninteractive
-
-# Instala a parte gráfica, o gerenciador Openbox e o navegador de forma correta
-RUN apt-get update && apt-get install -y --no-install-recommends \
+# Instala o ambiente gráfico estável e o Chromium
+RUN apt-get update && apt-get install -y \
     xvfb \
     x11vnc \
     novnc \
     websockify \
+    chromium \
     supervisor \
-    openbox \
-    chromium-browser \
-    dbus-x11 \
     && rm -rf /var/lib/apt/lists/*
 
-# SENHA OBRIGATÓRIA: Exigida pelo painel do ModelScope
-ENV VNC_PW=123456
+# Configura as definições de ecrã virtual estáveis
 ENV DISPLAY=:1
 ENV RESOLUTION=1280x800x16
 
-# Configura o gerenciador de processos (supervisor)
-RUN printf "[supervisord]\nnodaemon=true\n\n" > /etc/supervisord.conf
-RUN printf "[program:xvfb]\ncommand=Xvfb :1 -screen 0 1280x800x16\n\n" >> /etc/supervisord.conf
-RUN printf "[program:openbox]\ncommand=openbox-session\n\n" >> /etc/supervisord.conf
-RUN printf "[program:x11vnc]\ncommand=x11vnc -display :1 -forever -passwd 123456 -listen 127.0.0.1 -shared\n\n" >> /etc/supervisord.conf
-RUN printf "[program:novnc]\ncommand=websockify --web /usr/share/novnc 7860 127.0.0.1:5900\n\n" >> /etc/supervisord.conf
+# Cria a configuração do Supervisor para iniciar os serviços em paralelo na porta 7860
+RUN echo '[supervisord]\nnodaemon=true\n\n[program:xvfb]\ncommand=Xvfb :1 -screen 0 1280x800x16\n\n[program:x11vnc]\ncommand=x11vnc -display :1 -forever -nopw -listen localhost -shared\n\n[program:novnc]\ncommand=/usr/share/novnc/utils/launch.sh --vnc localhost:5900 --listen 7860\n\n[program:chromium]\ncommand=chromium --no-sandbox --disable-gpu --display=:1 --start-maximized https://google.com\nuser=root' > /etc/supervisord.conf
 
-# FLAGS OTIMIZADAS: Garante a inicialização fluida e camuflada no Dropcoins
-RUN printf "[program:chromium]\ncommand=chromium-browser --no-sandbox --disable-gpu --display=:1 --start-maximized --disable-dev-shm-usage --disable-blink-features=AutomationControlled --user-agent=\"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36\" --window-size=1280,800 https://dropcoins.xyz\n" >> /etc/supervisord.conf
-
+# Expõe a porta que o sistema de visualização do ModelScope lê por defeito
 EXPOSE 7860
 
 CMD ["/usr/bin/supervisord", "-c", "/etc/supervisord.conf"]
