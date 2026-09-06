@@ -3,25 +3,31 @@ FROM ubuntu:22.04
 ENV DEBIAN_FRONTEND=noninteractive
 ENV DISPLAY=:1
 
+# Instala o ambiente gráfico + VNC + noVNC + Firefox
 RUN apt-get update && apt-get install -y \
-    xfce4 xfce4-goodies \
-    # Adicionado net-tools para ajudar o script a gerenciar conexões internas
-    tigervnc-standalone-server tigervnc-common net-tools \
-    novnc websockify \
+    xfce4 \
+    xfce4-goodies \
+    tigervnc-standalone-server \
+    tigervnc-common \
+    novnc \
+    websockify \
     firefox \
     dbus-x11 \
-    && apt-get clean && rm -rf /var/lib/apt/lists/*
+    net-tools \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
-# Configura senha do VNC de forma dinâmica (usa 'password' se nenhuma for enviada)
+# Configura a senha do VNC (mude se quiser)
 ARG VNC_PASSWORD=password
 RUN mkdir -p /root/.vnc && \
     echo "$VNC_PASSWORD" | vncpasswd -f > /root/.vnc/passwd && \
     chmod 600 /root/.vnc/passwd
 
-# Script de inicialização
+# Copia e configura o script de inicialização
 COPY start.sh /start.sh
 RUN chmod +x /start.sh
 
-# Removeu a porta fixa EXPOSE 6080 para o Back4app gerenciar dinamicamente
+# Porta que o Fly.io vai usar
+EXPOSE 8080
 
 CMD ["/start.sh"]
